@@ -9,6 +9,7 @@ class TriangleFace {
 public:
     Vec3f vertices[3];
     Vec3f verticesTexture[3];
+    Vec3f verticesNormal[3];
 
     TriangleFace() {
 
@@ -93,8 +94,10 @@ public:
                     vector<string> items = mutils::stringSplit(s, '/');
                     Vec3f v = vertices[mutils::string2Int(items[0])-1]; // start from 1
                     Vec3f vt = verticesTexture[mutils::string2Int(items[1])-1];
+                    Vec3f vn = verticesNormal[mutils::string2Int(items[2])-1];
                     f.vertices[i] = v;
                     f.verticesTexture[i] = vt;
+                    f.verticesNormal[i] = vn;
                 }
                 trianlgeFaces.push_back(f);
             }
@@ -107,7 +110,7 @@ public:
     }
 };
 
-void drawTriangleWithTexture(vector<Vec3f> & pts, Matrix & zbuffer, PPMImage & image, vector<Vec3f> & vts, PPMImage & texture, RGBColor & color) {
+void drawTriangleWithTexture(vector<Vec3f> & pts, Matrix & zbuffer, PPMImage & image, vector<Vec3f> & vts, PPMImage & texture, real intensity) {
     Vec3f bboxmin(image.getWidth()-1, image.getHeight()-1, 0);
     Vec3f bboxmax(0, 0, 0);
     Vec3f clamp(image.getWidth()-1, image.getHeight()-1, 0);
@@ -137,7 +140,7 @@ void drawTriangleWithTexture(vector<Vec3f> & pts, Matrix & zbuffer, PPMImage & i
                     pts[1].z()*bc_screen.y() +
                     pts[2].z()*bc_screen.z()
                 );
-                // printf("%lf %lf\n", zbuffer.at(int(P.y()), int(P.x())), P.z());
+                // printf("%.4lf %.4lf\n", zbuffer.at(int(P.y()), int(P.x())), P.z());
                 if (zbuffer.at(int(P.y()), int(P.x())) < P.z()) {
                     zbuffer.set(int(P.y()), int(P.x()), P.z());
 
@@ -162,49 +165,6 @@ void drawTriangleWithTexture(vector<Vec3f> & pts, Matrix & zbuffer, PPMImage & i
                     RGBColor textureColor = texture.getColorAt(texture.getHeight()-text_y, text_x);
 
                     image.setColorAt(P.y(), P.x(), textureColor);
-                }
-            }
-            P.setY(P.y()+1);
-        }
-        P.setX(P.x()+1);
-    }
-}
-
-void drawTriangle(vector<Vec3f> & pts, Matrix & zbuffer, PPMImage & image, RGBColor & color) {
-    Vec3f bboxmin(image.getWidth()-1, image.getHeight()-1, 0);
-    Vec3f bboxmax(0, 0, 0);
-    Vec3f clamp(image.getWidth()-1, image.getHeight()-1, 0);
-    for (int i = 0; i < 3; ++i) {
-        bboxmin.setX(max(real(0), min(bboxmin.x(), pts[i].x())));
-        bboxmin.setY(max(real(0), min(bboxmin.y(), pts[i].y())));
-
-        bboxmax.setX(min(clamp.x(), max(bboxmax.x(), pts[i].x())));
-        bboxmax.setY(min(clamp.y(), max(bboxmax.y(), pts[i].y())));
-    }
-
-    // cout << "bboxmin:\n";
-    // bboxmin.println();
-    // cout << "bboxmax:\n";
-    // bboxmax.println();
-
-    Vec3f P;
-    P.setX(bboxmin.x());
-    while (P.x() <= bboxmax.x()) {
-        P.setY(bboxmin.y());
-        while (P.y() <= bboxmax.y()) {
-            Vec3f bc_screen = barycentric(pts, P);
-            real thres = -0.03;
-            if (!(bc_screen.x() < thres || bc_screen.y() < thres || bc_screen.z() < thres)) {
-                P.setZ(
-                    pts[0].z()*bc_screen.x() +
-                    pts[1].z()*bc_screen.y() +
-                    pts[2].z()*bc_screen.z()
-                );
-                // printf("%lf %lf\n", zbuffer.at(int(P.y()), int(P.x())), P.z());
-                if (zbuffer.at(int(P.y()), int(P.x())) < P.z()) {
-                // if (true) {
-                    zbuffer.set(int(P.y()), int(P.x()), P.z());
-                    image.setColorAt(P.y(), P.x(), color);
                 }
             }
             P.setY(P.y()+1);
